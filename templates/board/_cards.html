@@ -1,0 +1,7 @@
+{% load humanize %}
+{% for o in orders %}
+  {% include "board/_card.html" with o=o %}
+{% empty %}
+  <div class="muted">Sin órdenes para mostrar.</div>
+{% endfor %}
+<input type="hidden" id="last-ts" value="{{ now_iso }}">

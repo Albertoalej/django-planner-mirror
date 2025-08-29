@@ -1,0 +1,122 @@
+:root { --tile-h: 160px }
+body { background:#111; color:#fff; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto }
+.wrap { width:100%; max-width:none; margin:0 }
+
+/* ===== Barra superior sticky ===== */
+.bar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display:flex; gap:12px; align-items:center; justify-content:space-between;
+    background:#1f1f1f;
+    padding:12px 18px;
+    border-bottom:1px solid #2a2a2a;
+    /* Opcional: efecto glass sutil al hacer scroll */
+    backdrop-filter: saturate(120%) blur(2px);
+}
+
+.kpis { display:flex; gap:12px; flex-wrap:wrap }
+.kpi { min-width: 12rem; background:#2a2a2a; padding:8px 12px; border-radius:12px; display:flex; gap:8px; align-items:center }
+.kpi .v { font-size:28px; font-weight:800; line-height:1 }
+.muted { opacity:.9; font-size:12px }
+
+/* Grid de tarjetas */
+.ticker{ display:grid; grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr)); gap:12px; padding:16px; overflow:visible; align-content:start }
+
+.card {
+    border:1px solid #2a2a2a;
+    border-radius:16px;
+    padding:14px;
+    height:var(--tile-h);
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    color:#fff;
+    box-shadow: 0 2px 10px rgba(0,0,0,.25);
+    cursor: pointer;
+    position: relative;
+}
+
+.cliente-name {
+    font-size: 15px;          /* un poquito más grande */
+    font-weight: 600;         /* opcional: más fuerte */
+    white-space: nowrap;      /* no permite saltos de línea */
+    overflow: hidden;         /* oculta lo que se desborda */
+    text-overflow: ellipsis;  /* pone … al final si no cabe */
+}
+
+.card-pend { background:#13213a; border-color: rgba(96,165,250,.25); }  /* Pendiente: azul oscuro */
+.card-surt { background:#3a2a00; border-color: rgba(255,204,102,.20); } /* Surtido: ámbar oscuro */
+.card-fin  { background:#0c2a1a; border-color: rgba(110,231,183,.20); } /* Finalizado: verde oscuro */
+
+.card.has-check .folio-block { padding-left: 32px; }
+
+.tag { background:rgba(0,0,0,.25); padding:2px 6px; border-radius:6px; font-size:11px; border:1px solid rgba(255,255,255,.08) }
+
+.status-text { font-weight:700; font-size:12px; letter-spacing:.3px }
+.status-pend { color:#60a5fa }  /* azul */
+.status-surt { color:#ffcc66 }  /* amarillo */
+.status-fin  { color:#6ee7b7 }  /* verde */
+
+.complete-btn{
+    display:inline-flex; align-items:center; justify-content:center;
+    gap:6px;
+    height:28px; min-width:28px; padding:0 10px;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.18);
+    background: rgba(0,0,0,.25);
+    color:#bbb;
+    font-weight:700; cursor:pointer;
+}
+.complete-btn:hover{ background: rgba(0,0,0,.35); }
+.complete-btn:disabled{ opacity:.5; cursor:not-allowed }
+.card .complete-btn{
+    position:absolute; top:8px; left:8px;
+    width:28px; padding:0; border-radius:999px;
+}
+.complete-btn.is-done{ color:#6ee7b7; background: rgba(0,0,0,.20); border-color: rgba(110,231,183,.35); }
+.complete-btn .icon-check{ display:none; }
+.complete-btn.is-done .icon-check{ display:inline; }
+.complete-btn.is-done .icon-circle{ display:none; }
+
+/* Modal */
+.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
+.modal-backdrop.show { display: flex; }
+.modal-card { width: min(100%, 900px); background:#1a1a1a; border:1px solid #2a2a2a; border-radius:16px; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
+.modal-header { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid #2a2a2a }
+.modal-body { padding: 16px; max-height: 70vh; overflow:auto }
+.btn-close { background:transparent; border:1px solid #2a2a2a; color:#bbb; padding:6px 10px; border-radius:8px; cursor:pointer }
+.btn-close:hover { background:#2a2a2a; color:#fff }
+
+.product-table { width: 100%; border-collapse: collapse; font-size: 14px; background: #1f1f1f; border-radius: 8px; overflow: hidden; }
+.product-table th { background: #2a2a2a; color: #bbb; font-weight: 600; padding: 10px 8px; text-align: left; }
+.product-table td { padding: 10px 8px; border-top: 1px solid #2a2a2a; }
+.product-table tr:hover td { background: #262626; }
+
+/* Boton de guardar en Error */
+.save-btn {
+padding: 6px 12px;
+border: none;
+border-radius: 6px;
+font-weight: bold;
+cursor: pointer;
+transition: background-color 0.2s;
+}
+
+/* Estado guardado (verde) */
+.save-btn.saved {
+background-color: #4CAF50; /* Verde */
+color: white;
+}
+.save-btn.saved:hover {
+background-color: #45a049; /* Verde más oscuro al hover */
+}
+
+/* Estado con cambios pendientes (rojo) */
+.save-btn.unsaved {
+background-color: #dc2626; /* Rojo */
+color: white;
+}
+.save-btn.unsaved:hover {
+background-color: #b91c1c; /* Rojo más oscuro al hover */
+}
