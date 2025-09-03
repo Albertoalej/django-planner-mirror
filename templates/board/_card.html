@@ -1,0 +1,48 @@
+{% load humanize %}
+<article
+  class="card {% if o.status == 'PENDIENTE' %}card-pend{% elif o.status == 'SURTIDO' %}card-surt has-check{% else %}card-fin has-check{% endif %}"
+  hx-get="{% url 'order-detail' o.pk %}"
+  hx-target="#modal-body"
+  hx-swap="innerHTML"
+>
+  <!-- Botón toggle solo si status != PENDIENTE -->
+  {% if o.status != 'PENDIENTE' %}
+    <button class="complete-btn {% if o.status == 'FINALIZADO' %}is-done{% endif %}"
+            title="{% if o.status == 'FINALIZADO' %}Reabrir (a Surtido){% else %}Marcar como FINALIZADO{% endif %}"
+            hx-post="{% url 'order-complete' o.pk %}"
+            hx-vals='{"context":"card"}'
+            hx-target="closest article"
+            hx-swap="outerHTML"
+            onclick="event.stopPropagation()">
+      <span class="icon-circle">○</span>
+      <span class="icon-check">✓</span>
+    </button>
+  {% endif %}
+
+  <div style="display:flex;justify-content:space-between;gap:8px">
+    <div class="folio">
+      <div class="folio-block" style="font-weight:800">{{ o.folio|floatformat:0|intcomma }}</div>
+      <div class="muted-name">{{ o.cliente }}</div>
+      <div class="muted">Vendedor: {{ o.vendedor }}</div>
+    </div>
+
+    <span class="status-text {% if o.status == 'PENDIENTE' %}status-pend{% elif o.status == 'SURTIDO' %}status-surt{% else %}status-fin{% endif %}">
+      {% if o.status == 'PENDIENTE' %}PENDIENTE{% elif o.status == 'SURTIDO' %}SURTIDO{% else %}FINALIZADO{% endif %}
+    </span>
+  </div>
+
+  <div class="muted" style="margin-top:6px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
+    <span>
+      Creado: {{ o.fecha_creacion|date:"d/m/Y H:i" }}
+      {% if o.fecha_finalizacion %} • Fin: {{ o.fecha_finalizacion|date:"d/m/Y H:i" }}{% endif %}
+    </span>
+    <span>
+      <span class="tag">Almacén: {{ o.almacen }}</span>
+      <span class="tag">Entrega: {{ o.metodo_entrega|title }}</span>
+      {% if o.fecha_entrega %}<span class="tag">Fecha entrega: {{ o.fecha_entrega|date:"d/m/Y" }}</span>{% endif %}
+      {% if o.has_error %}
+        <span class="tag" title="Marcada con error" style="margin-left:6px">Error</span>
+      {% endif %}
+    </span>
+  </div>
+</article>

@@ -1,0 +1,169 @@
+{% load static humanize %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="icon" type="image/x-icon" href="{% static 'board/SFS.png' %}">
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+  <title>{{ sucursal }} • Tablero</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+</head>
+<body>
+  <div class="wrap">
+
+    <header class="bar">
+      <div style="display:flex;align-items:center;gap:12px">
+        {% csrf_token %}
+        <img src="{% static 'board/SFS.png' %}" alt="logo" style="height:40px;width:40px">
+        <div style="font-weight:700;font-size:18px">{{ sucursal }}</div>
+      </div>
+
+      <!-- Toolbar -->
+      <form id="toolbar" style="display:flex; gap:10px; align-items:center">
+        <input type="hidden" name="date_from" value="{{ date_from|default:'2025-08-25' }}">
+        <input type="text" name="q" value="{{ q|default:'' }}" placeholder="Buscar cliente o folio"
+               class="px-3 py-2 rounded-md border border-gray-600 bg-[#2a2a2a] text-sm"
+               hx-get="{% url 'orders-cards' %}"
+               hx-trigger="keyup changed delay:400ms"
+               hx-target="#cards"
+               hx-include="#toolbar"
+               hx-swap="innerHTML">
+        <div style="display:flex; gap:6px">
+          <input type="hidden" name="view" id="view-input" value="{{ view_mode|default:'relevantes' }}">
+          <button id="btn-rel" type="button"
+                  class="px-3 py-2 rounded-md text-sm"
+                  onclick="setView('relevantes')">Relevantes</button>
+          <button id="btn-pas" type="button"
+                  class="px-3 py-2 rounded-md text-sm"
+                  onclick="setView('pasados')">Pasados</button>
+        </div>
+      </form>
+
+      <!-- KPIs -->
+      <div id="kpis"
+           hx-get="{% url 'kpis' %}"
+           hx-trigger="load, every 60s, refreshKpis from:body"
+           hx-include="#toolbar"
+           hx-swap="innerHTML">
+        {% include 'board/_kpis.html' with kpis=kpis last_update=last_update %}
+      </div>
+    </header>
+
+    <main>
+      <!-- Tarjetas -->
+      <section class="ticker" id="cards"
+        hx-get="{% url 'orders-cards' %}"
+        hx-trigger="load, every 60s"
+        hx-include="#toolbar"
+        hx-swap="innerHTML">
+        {% include 'board/_cards.html' with orders=orders now_iso=last_update %}
+      </section>
+
+      <div style="height:58vh;border:1px solid #2a2a2a;border-radius:12px;margin:12px;background:#141414"></div>
+    </main>
+
+  </div>
+
+  <!-- Modal -->
+  <div id="modal" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div style="font-weight:700">Detalle de la orden</div>
+        <button class="btn-close" onclick="closeModal()">Cerrar</button>
+      </div>
+      <div id="modal-body" class="modal-body"></div>
+    </div>
+  </div>
+
+  <script>
+    // ===== Vista activa (botones) =====
+    function updateViewButtons() {
+      const view = document.getElementById('view-input')?.value || 'relevantes';
+      const rel = document.getElementById('btn-rel');
+      const pas = document.getElementById('btn-pas');
+
+      if (!rel || !pas) return;
+
+      // Reset clases base
+      [rel, pas].forEach(btn => {
+        btn.classList.remove('bg-blue-600');
+        btn.classList.remove('bg-[#2a2a2a]');
+        btn.classList.add('bg-[#2a2a2a]');
+      });
+
+      // Activo en azul
+      if (view === 'relevantes') {
+        rel.classList.remove('bg-[#2a2a2a]');
+        rel.classList.add('bg-blue-600');
+      } else {
+        pas.classList.remove('bg-[#2a2a2a]');
+        pas.classList.add('bg-blue-600');
+      }
+    }
+
+    function setView(view){
+      const input   = document.getElementById('view-input');
+      const toolbar = document.getElementById('toolbar');
+      input.value = view;
+
+      // feedback inmediato en botones
+      updateViewButtons();
+
+      // Disparar requests pasando los valores del form (view, q, date_from)
+      htmx.ajax('GET', "{% url 'kpis' %}", {
+        target: '#kpis',
+        values: htmx.values(toolbar)
+      });
+      htmx.ajax('GET', "{% url 'orders-cards' %}", {
+        target: '#cards',
+        values: htmx.values(toolbar)
+      });
+    }
+
+    // Llamar una vez al cargar
+    document.addEventListener('DOMContentLoaded', updateViewButtons);
+
+    // Y cada vez que HTMX termine un swap en KPIs o Cards (por si algo cambiara)
+    document.body.addEventListener('htmx:afterSwap', function (evt) {
+      if (evt.target && (evt.target.id === 'kpis' || evt.target.id === 'cards')) {
+        updateViewButtons();
+      }
+      // abrir modal
+      if (evt.target && evt.target.id === 'modal-body') {
+        document.getElementById('modal').classList.add('show');
+      }
+    });
+
+    function closeModal() {
+      document.getElementById('modal').classList.remove('show');
+      document.getElementById('modal-body').innerHTML = '';
+    }
+
+    // Pausar polling si modal abierto
+    document.body.addEventListener('htmx:beforeRequest', function (evt) {
+      const modalOpen = document.getElementById('modal')?.classList.contains('show');
+      const isCardsReq = evt.detail.elt && evt.detail.elt.id === 'cards';
+      if (modalOpen && isCardsReq) evt.preventDefault();
+    });
+
+    // CSRF + since
+    function getCookie(name) {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+    document.body.addEventListener('htmx:configRequest', function (evt) {
+      if (evt.detail && evt.detail.verb && evt.detail.verb.toUpperCase() !== 'GET') {
+        const token = getCookie('csrftoken'); if (token) evt.detail.headers['X-CSRFToken'] = token;
+      }
+      if (evt.detail.elt && evt.detail.elt.id === 'cards') {
+        const last = document.querySelector('#last-ts')?.value;
+        if (last) evt.detail.parameters['since'] = last;
+      }
+    });
+  </script>
+</body>
+</html>

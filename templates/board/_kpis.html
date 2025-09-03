@@ -1,0 +1,9 @@
+<div class="kpis">
+  {% for k in kpis %}
+    <div class="kpi">
+      <div class="v">{{ k.value }}</div>
+      <div class="muted">{{ k.label }}</div>
+    </div>
+  {% endfor %}
+</div>
+<div class="muted">Actualizado: {{ last_update }}</div>

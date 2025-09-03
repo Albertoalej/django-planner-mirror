@@ -1,0 +1,167 @@
+{# templates/board/order_print.html #}
+{% load humanize %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Pedido {{ orden.folio|default:orden.pk|floatformat:0|intcomma }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <style>
+    /* ======== Estilos base (en pantalla) ======== */
+    :root {
+      --fg: #111827;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+      --accent: #111827;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; color: var(--fg); font: 14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+    .toolbar {
+      position: sticky; top: 0; background: white; border-bottom: 1px solid var(--line);
+      padding: 10px 16px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 12px; border: 1px solid var(--accent); border-radius: 8px;
+      background: white; color: var(--accent); text-decoration: none; cursor: pointer;
+    }
+    .container { max-width: 850px; margin: 16px auto; padding: 0 16px 24px; }
+    .header { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: start; margin-bottom: 12px; }
+    h1 { font-size: 20px; margin: 0; }
+    .muted { color: var(--muted); }
+    .grid {
+      display: grid; gap: 8px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin: 8px 0 16px;
+    }
+    .card {
+      border: 1px solid var(--line); border-radius: 10px; padding: 12px;
+    }
+    .label { font-size: 12px; color: var(--muted); }
+    .value { font-weight: 600; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 8px; border-bottom: 1px solid var(--line); text-align: left; }
+    th { font-size: 12px; text-transform: uppercase; letter-spacing: .02em; color: var(--muted); }
+    tfoot td { font-weight: 600; }
+    .note { margin-top: 8px; color: var(--muted); font-size: 12px; }
+
+    /* ======== Estilos para impresión ======== */
+    @page {
+    size: A4;
+    margin: 12mm; /* puedes reducir o ampliar márgenes */
+    @bottom-center {
+        content: counter(page) " / " counter(pages);
+        font-size: 11px;
+        color: #444;
+    }
+    }
+
+    /* Forzar quitar headers/footers de navegador (solo modernos como Chrome/Edge respetan esto) */
+    @media print {
+    body {
+        -webkit-print-color-adjust: exact;
+    }
+    .toolbar { display: none !important; }
+    /* Elimina encabezado/pie estándar (URL, fecha, etc.) */
+    @page {
+        margin-header: 0;
+        margin-footer: 0;
+    }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <div class="muted">Vista de impresión</div>
+    <button class="btn" onclick="window.print()">🖨️ Imprimir</button>
+  </div>
+
+  <div class="container">
+    <div class="header">
+      <div>
+        <h1>Pedido {{ orden.folio|default:orden.pk|floatformat:0|intcomma }}</h1>
+        <div class="muted">
+          {% if orden.status %}Status: {{ orden.status|title }} · {% endif %}
+          {% if orden.fecha_creacion %}Creado: {{ orden.fecha_creacion|date:"d/m/Y H:i" }}{% endif %}
+          {% if orden.fecha_finalizacion %} · Finalizado: {{ orden.fecha_finalizacion|date:"d/m/Y H:i" }}{% endif %}
+        </div>
+      </div>
+      <div class="muted" style="text-align:right">
+        {% if orden.has_error %}<strong style="color:#b91c1c;">Con error</strong><br>{% endif %}
+        {{ orden.pk }}
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="label">Cliente</div>
+        <div class="value">{{ orden.cliente }}</div>
+      </div>
+      <div class="card">
+        <div class="label">Vendedor</div>
+        <div class="value">{{ orden.vendedor }}</div>
+      </div>
+      <div class="card">
+        <div class="label">Almacén</div>
+        <div class="value">{{ orden.almacen }}</div>
+      </div>
+      {% if orden.metodo_entrega %}
+      <div class="card">
+        <div class="label">Entrega</div>
+        <div class="value">{{ orden.metodo_entrega|title }}</div>
+        {% if orden.fecha_entrega %}
+            <div class="muted" style="margin-top:2px;">
+            Fecha: {{ orden.fecha_entrega|date:"d/m/Y" }}
+            </div>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+
+    {% if orden.referencia %}
+    <div class="card">
+      <div class="label">Referencia</div>
+      <div class="value" style="white-space:pre-wrap">{{ orden.referencia }}</div>
+    </div>
+    {% endif %}
+
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:18%">Código</th>
+            <th>Descripción</th>
+            <th style="width:12%; text-align:right">Almacén</th>
+            <th style="width:12%; text-align:right">Unidades</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% regroup items by almacen as almacen_list %}
+        {% for group in almacen_list %}
+            {# Línea divisoria antes de cada nuevo almacén (menos el primero) #}
+            {% if not forloop.first %}
+            <tr>
+                <td colspan="4" style="border-top:3px solid #111; height:6px;"></td>
+            </tr>
+            {% endif %}
+
+            {% for it in group.list %}
+            {% if it.codigo != "CONTROL" %}
+            <tr>
+                <td>{{ it.codigo }}</td>
+                <td>{{ it.descripcion }}</td>
+                <td style="text-align:right">{{ it.almacen }}</td>
+                <td style="text-align:right">{{ it.unidades|floatformat:0|intcomma }}</td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>window.print()</script>
+</body>
+</html>

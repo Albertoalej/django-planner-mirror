@@ -1,0 +1,106 @@
+{% load humanize %}
+
+<style>
+  .order-detail {
+    border: 2px solid transparent;
+    border-radius: 8px;
+    padding: 12px;
+  }
+  .order-detail--error {
+    border-color: #dc2626;
+  }
+</style>
+
+<div class="order-detail {% if orden.has_error %}order-detail--error{% endif %}">
+  <div>
+    <div style="font-size:18px;font-weight:800">Folio {{ orden.folio|floatformat:0|intcomma }}</div>
+    <div class="muted">{{ orden.cliente }}</div>
+    <div class="muted">Vendedor: {{ orden.vendedor }}</div>
+  </div>
+
+  <div style="margin:8px 0 10px;">
+    <a href="{% url 'order-print' orden.pk %}"
+      target="_blank"
+      rel="noopener"
+      class="complete-btn"
+      title="Abrir versión de impresión en una nueva pestaña">
+      Imprimir pedido
+    </a>
+  </div>
+
+  <div style="text-align:right">
+    <div class="muted">Status: {{ orden.status|title }}</div>
+    <div class="muted">Almacén: {{ orden.almacen }}</div>
+    <div class="muted">
+      Creado:
+      {% if orden.first_seen_at %}{{ orden.first_seen_at|date:"d/m/Y H:i" }}
+      {% elif orden.fecha_creacion %}{{ orden.fecha_creacion|date:"d/m/Y H:i" }}{% endif %}
+      {% if orden.fecha_finalizacion %} • Fin: {{ orden.fecha_finalizacion|date:"d/m/Y H:i" }}{% endif %}
+    </div>
+    {% if orden.fecha_entrega %}
+      <div class="muted">Fecha entrega: {{ orden.fecha_entrega|date:"d/m/Y" }}</div>
+    {% endif %}
+
+    {% if orden.is_finalizado %}
+      <div style="margin:8px 0">
+        {% include "board/_order_error_controls.html" %}
+      </div>
+    {% endif %}
+
+    {% if orden.status == 'PENDIENTE' %}
+      <!-- No mostrar botón en pendiente -->
+    {% elif orden.status == 'FINALIZADO' %}
+      <div style="margin-top:8px">
+        <button class="complete-btn is-done"
+                title="Reabrir (a Surtido)"
+                hx-post="{% url 'order-complete' orden.pk %}"
+                hx-vals='{"context":"detail"}'
+                hx-target="#modal-body"
+                hx-swap="innerHTML"
+                hx-confirm="¿Seguro que quieres reabrir este pedido? Se moverá de FINALIZADO a SURTIDO.">
+          <span class="icon-check">✓</span> Reabrir
+        </button>
+      </div>
+    {% else %}
+      <div style="margin-top:8px">
+        <button class="complete-btn"
+                title="Marcar como FINALIZADO"
+                hx-post="{% url 'order-complete' orden.pk %}"
+                hx-vals='{"context":"detail"}'
+                hx-target="#modal-body"
+                hx-swap="innerHTML">
+          <span class="icon-circle">○</span> Marcar finalizado
+        </button>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<h4 style="margin:8px 0 12px 0;font-weight:700">Productos</h4>
+
+<table class="product-table">
+  <thead>
+    <tr>
+      <th style="width:20%">Código</th>
+      <th style="width:45%;">Descripción</th>
+      <th style="width:5%">Almacén</th>
+      <th style="width:30%;text-align:right">Unidades</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for it in items %}
+      {% if it.codigo != "CONTROL" %}
+        <tr>
+          <td>{{ it.codigo }}</td>
+          <td>{{ it.descripcion }}</td>
+          <td>{{ it.almacen }}</td>
+          <td style="text-align:right">{{ it.unidades|floatformat:0|intcomma }}</td>
+        </tr>
+      {% endif %}
+    {% empty %}
+      <tr>
+        <td colspan="4" class="muted" style="text-align:center;padding:12px">Sin partidas.</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>

@@ -1,0 +1,73 @@
+{# Mantengo tu estilo: botones tipo .complete-btn, tags sutiles y layout flex. #}
+<div id="error-controls-{{ orden.pk }}" style="display:flex;flex-direction:column;gap:8px">
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    <button class="complete-btn {% if orden.has_error %}is-done{% endif %}"
+            title="{% if orden.has_error %}Quitar marca de error{% else %}Marcar error en factura/partida{% endif %}"
+            hx-post="{% url 'order-error-toggle' orden.pk %}"
+            hx-target="#error-controls-{{ orden.pk }}"
+            hx-swap="outerHTML">
+      {% if orden.has_error %}Con error{% else %}Marcar error{% endif %}
+    </button>
+
+    {% if orden.has_error %}
+      <span class="tag" title="Esta orden está marcada con error">Error</span>
+    {% endif %}
+  </div>
+
+  {% if orden.has_error %}
+    <form
+      hx-post="{% url 'order-error-save' orden.pk %}"
+      hx-target="#error-controls-{{ orden.pk }}"
+      hx-swap="outerHTML"
+      method="post"
+      style="display:flex;flex-direction:column;gap:8px;border:1px solid #eee;padding:8px;border-radius:8px"
+    >
+      {% csrf_token %}
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <label style="min-width:160px">Responsable</label>
+        <select name="error_responsable" style="padding:6px;border:1px solid #ddd;border-radius:6px;min-width:220px;background-color:#1a1a1a;color:white">
+          <option value="">— Selecciona —</option>
+          {% for r in responsables %}
+            <option value="{{ r.id }}" {% if orden.error_responsable == r.nombre %}selected{% endif %}>{{ r.nombre }}</option>
+          {% endfor %}
+        </select>
+
+        <label style="display:flex;align-items:center;gap:6px">
+          <input type="checkbox" name="error_resuelto" {% if orden.error_resuelto %}checked{% endif %}>
+          ¿Se solucionó?
+        </label>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <label>Comentarios</label>
+        <textarea name="error_comentarios" rows="3" style="padding:6px;border:1px solid #ddd;border-radius:6px;background-color:#1a1a1a;color:white">{{ orden.error_comentarios }}</textarea>
+      </div>
+
+      <div>
+        <button id="saveButton"
+          class="complete-btn save-btn saved"
+          type="submit"
+          title="Guardar cambios">Guardar</button>
+      </div>
+      <script>
+        const form = document.querySelector('#error-controls-{{ orden.pk }} form');
+        const saveBtn = document.getElementById('saveButton');
+
+        if (form) {
+          // Detecta cambios en cualquier input del form
+          form.addEventListener('input', () => {
+            saveBtn.classList.remove('saved');
+            saveBtn.classList.add('unsaved');
+          });
+
+          // Cuando se hace submit (guardar), regresa a verde
+          form.addEventListener('submit', () => {
+            saveBtn.classList.remove('unsaved');
+            saveBtn.classList.add('saved');
+          });
+        }
+      </script>
+    </form>
+  {% endif %}
+</div>
